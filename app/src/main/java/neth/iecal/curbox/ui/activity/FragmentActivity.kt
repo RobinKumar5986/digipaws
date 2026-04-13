@@ -13,9 +13,11 @@ import neth.iecal.curbox.ui.fragments.main.reducers.ReducersFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.analytics.IntentsLogFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.grayscale.CreateGrayscaleGroupFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.grayscale.GrayscaleFragment
+import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.AllGeoLocationList
 import neth.iecal.curbox.ui.fragments.main.usage.AllAppsUsageFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.AppBlockerGroupsFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.CreateAppGroupFragment
+import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.GeoBlockerGroupsFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autofocus.AutoFocusFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autofocus.CreateAutoFocusGroupFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.reelBlocker.ReelBlockerFragment
@@ -39,10 +41,11 @@ class FragmentActivity : AppCompatActivity() {
         val sharedPreferences = getSharedPreferences("AppPreferences", android.content.Context.MODE_PRIVATE)
         val isFirstLaunchComplete = sharedPreferences.getBoolean("isFirstLaunchComplete", false)
         var selectedFragment = intent.getStringExtra("fragment") ?: AllAppsUsageFragment.FRAGMENT_ID
+
         if (!isFirstLaunchComplete && intent.getStringExtra("fragment") == null) {
             selectedFragment = OnboardingFragment.FRAGMENT_ID
         }
-        
+
         when (selectedFragment) {
             OnboardingFragment.FRAGMENT_ID,
             AccessibilityGuide.FRAGMENT_ID,
@@ -54,13 +57,15 @@ class FragmentActivity : AppCompatActivity() {
             neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.reel_counter.ReelCounterFragment.FRAGMENT_ID,
             GrayscaleFragment.FRAGMENT_ID,
             CreateGrayscaleGroupFragment.FRAGMENT_ID,
-                ViewBlockerFragment.FRAGMENT_ID,
-                IntentsLogFragment.FRAGMENT_ID,
+            ViewBlockerFragment.FRAGMENT_ID,
+            IntentsLogFragment.FRAGMENT_ID,
             neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment.FRAGMENT_ID,
-            KeywordBlockerFragment.FRAGMENT_ID -> {
-                // Hide bottom nav for these standalone fragments
+            KeywordBlockerFragment.FRAGMENT_ID,
+            AllGeoLocationList.FRAGMENT_ID,
+            GeoBlockerGroupsFragment.FRAGMENT_ID -> {
+
                 bottomNav.visibility = android.view.View.GONE
-                
+
                 val fragment = when (selectedFragment) {
                     OnboardingFragment.FRAGMENT_ID -> OnboardingFragment()
                     AppBlockerGroupsFragment.FRAGMENT_ID -> AppBlockerGroupsFragment()
@@ -75,8 +80,11 @@ class FragmentActivity : AppCompatActivity() {
                     CreateGrayscaleGroupFragment.FRAGMENT_ID -> CreateGrayscaleGroupFragment()
                     neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment.FRAGMENT_ID -> neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment()
                     IntentsLogFragment.FRAGMENT_ID -> IntentsLogFragment()
+                    AllGeoLocationList.FRAGMENT_ID -> AllGeoLocationList()
+                    GeoBlockerGroupsFragment.FRAGMENT_ID -> GeoBlockerGroupsFragment()
                     else -> AccessibilityGuide()
                 }
+
                 fragment.arguments = intent.extras
 
                 supportFragmentManager.beginTransaction()
@@ -84,16 +92,15 @@ class FragmentActivity : AppCompatActivity() {
                     .commit()
             }
             else -> {
-                // Show bottom nav for main fragments
                 bottomNav.visibility = android.view.View.VISIBLE
-                
+
                 if (savedInstanceState == null) {
                     bottomNav.selectedItemId = R.id.nav_usage
                     supportFragmentManager.beginTransaction()
                         .replace(R.id.fragment_holder, AllAppsUsageFragment())
                         .commit()
                 }
-                
+
                 bottomNav.setOnItemSelectedListener { item ->
                     val fragment = when (item.itemId) {
                         R.id.nav_usage -> AllAppsUsageFragment()
@@ -102,7 +109,7 @@ class FragmentActivity : AppCompatActivity() {
                         R.id.nav_info -> neth.iecal.curbox.ui.fragments.main.InfoFragment()
                         else -> AllAppsUsageFragment()
                     }
-                    
+
                     supportFragmentManager.beginTransaction()
                         .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
                         .replace(R.id.fragment_holder, fragment)

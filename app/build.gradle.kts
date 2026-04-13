@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
+    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
 }
 
 android {
@@ -115,6 +116,10 @@ dependencies {
 
     implementation(libs.mpandroidchart)
     implementation(libs.timerangepicker)
+
+    implementation("com.google.android.gms:play-services-maps:20.0.0")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("com.google.code.gson:gson:2.10.1")
 
 }
 androidComponents {

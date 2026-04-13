@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Curbox</string>
+    <string name="app_name">&#8203; Curbox</string>
     <string name="focus_mode">Focus Mode</string>
     <string name="add">Add</string>
     <string name="save">Save</string>
@@ -67,7 +67,9 @@
     <string name="val_100">+100%</string>
     <string name="blocker_tools">Focus Boundaries</string>
     <string name="app_blocker">App Pause</string>
+    <string name="geo_blocker">Geo Pause</string>
     <string name="restrict_access_to_distracting_apps">Temporarily mute apps to protect your deep work and focus.</string>
+    <string name="geo_block_description">Block app based on geolocation.</string>
     <string name="reels_blocker">Reels Pause</string>
     <string name="disable_shortform_video_feeds">Hide short-form videos to help maintain your attention span.</string>
     <string name="auto_focus">Auto Focus</string>
@@ -273,4 +275,13 @@
     <string name="picker_notification_text">Tap to start picking an element</string>
     <string name="picker_active_title">Element Picker Active</string>
     <string name="picker_active_text">Tap elements on screen to select them</string>
+
+    <string name="place_name_hint">Place name</string>
+    <string name="center_marker">Centre marker</string>
+    <string name="my_location">My location</string>
+    <string name="radius_slider">Radius</string>
+    <string name="radius_ft_format">%d ft</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
 </resources>

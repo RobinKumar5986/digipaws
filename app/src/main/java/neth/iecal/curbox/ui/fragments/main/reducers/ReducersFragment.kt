@@ -23,6 +23,7 @@ class ReducersFragment : Fragment() {
         val reelBlockerCard = view.findViewById<MaterialCardView>(R.id.card_reels_blocker)
         val keywordBlockerCard = view.findViewById<MaterialCardView>(R.id.card_keyword_blocker)
         val autoFocusCard = view.findViewById<MaterialCardView>(R.id.card_autofocus)
+        val geoBlockerCard = view.findViewById<MaterialCardView>(R.id.card_geo_blocker)
         
         appBlockerCard.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
@@ -48,6 +49,12 @@ class ReducersFragment : Fragment() {
         autoFocusCard.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
                 putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autofocus.AutoFocusFragment.FRAGMENT_ID)
+            }
+            startActivity(intent)
+        }
+        geoBlockerCard.setOnClickListener {
+            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.AllGeoLocationList.FRAGMENT_ID)
             }
             startActivity(intent)
         }

@@ -8,6 +8,10 @@ import android.content.IntentFilter
 import android.os.Build
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +27,9 @@ import neth.iecal.curbox.blockers.KeywordBlocker
 import neth.iecal.curbox.blockers.ReelBlocker
 import neth.iecal.curbox.blockers.viewblocker.ElementPickerNotification
 import neth.iecal.curbox.blockers.viewblocker.ViewBlocker
+import neth.iecal.curbox.data.sharedpreferences.SharedPreferences
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.viewBlocker.ViewBlockerFragment
+import neth.iecal.curbox.utils.GeofenceManager
 
 @Suppress("DEPRECATION")
 class AppBlockerService : BaseBlockingService() {
@@ -34,6 +40,10 @@ class AppBlockerService : BaseBlockingService() {
     private var keywordBlocker = KeywordBlocker()
     private val viewBlocker = ViewBlocker()
     private var pickerNotification: ElementPickerNotification? = null
+    private var grayScaleFilter = GrayScaleFilter()
+
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var sharedPrefs: SharedPreferences
 
     private val pickerReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -56,9 +66,6 @@ class AppBlockerService : BaseBlockingService() {
         }
     }
 
-
-    private var grayScaleFilter = GrayScaleFilter()
-
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     private val eventChannel = Channel<AccessibilityEvent>(Channel.CONFLATED) { droppedEvent ->
@@ -70,6 +77,8 @@ class AppBlockerService : BaseBlockingService() {
     override fun onCreate() {
         super.onCreate()
         crashLogger = CrashLogger(this)
+        sharedPrefs = SharedPreferences(this)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         try {
             rikka.shizuku.ShizukuProvider.requestBinderForNonProviderProcess(this)
         } catch (e: Exception) {
@@ -81,21 +90,57 @@ class AppBlockerService : BaseBlockingService() {
         event ?: return
         super.onAccessibilityEvent(event)
 
-        try {
-            appBlocker.doAppBlockerCheck(event)
-            grayScaleFilter.doGrayscaleCheck(event)
-            focusModeBlocker.doFocusModeCheck(event)
-        } catch (t: Throwable) {
-            Log.e("error",t.message.toString())
-            crashLogger.logNonFatalError(Exception(t))
+        checkLocationAndExecute(event) {
+            try {
+                appBlocker.doAppBlockerCheck(event)
+                grayScaleFilter.doGrayscaleCheck(event)
+                focusModeBlocker.doFocusModeCheck(event)
+            } catch (t: Throwable) {
+                Log.e("error", t.message.toString())
+                crashLogger.logNonFatalError(Exception(t))
+            }
+
+            val eventCopy = AccessibilityEvent.obtain(event)
+            val result = eventChannel.trySend(eventCopy)
+
+            // If the channel is closed or rejected it, recycle immediately
+            if (result.isFailure) {
+                eventCopy.recycle()
+            }
+        }
+    }
+
+    //function for checking the geo fence.
+    @SuppressLint("MissingPermission")
+    private fun checkLocationAndExecute(event: AccessibilityEvent, action: () -> Unit) {
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val cached = sharedPrefs.getLastLocation()
+            if (cached != null && GeofenceManager.isUserInsideAnyLocation(this, cached.latitude, cached.longitude)) {
+                action()
+            }
+            return
         }
 
-        val eventCopy = AccessibilityEvent.obtain(event)
-        val result = eventChannel.trySend(eventCopy)
+        val lastTime = sharedPrefs.getLastLocationTime()
+        val currentTime = System.currentTimeMillis()
+        val throttleLimit = 30 * 60 * 1000
 
-        // If the channel is closed or rejected it, recycle immediately
-        if (result.isFailure) {
-            eventCopy.recycle()
+        if (currentTime - lastTime <= throttleLimit) {
+            val cached = sharedPrefs.getLastLocation()
+            if (cached != null && GeofenceManager.isUserInsideAnyLocation(this, cached.latitude, cached.longitude)) {
+                action()
+            }
+        } else {
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
+                .addOnSuccessListener { location ->
+                    if (location != null) {
+                        val latLng = LatLng(location.latitude, location.longitude)
+                        sharedPrefs.saveLastLocation(latLng)
+                        if (GeofenceManager.isUserInsideAnyLocation(this, latLng.latitude, latLng.longitude)) {
+                            action()
+                        }
+                    }
+                }
         }
     }
 
@@ -170,6 +215,6 @@ class AppBlockerService : BaseBlockingService() {
 
             eventChannel.close()
             serviceScope.cancel()
-        }catch (_: Exception){}
+        } catch (_: Exception) {}
     }
 }
