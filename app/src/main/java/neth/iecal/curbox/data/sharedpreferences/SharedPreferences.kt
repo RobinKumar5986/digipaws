@@ -5,7 +5,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import neth.iecal.curbox.data.models.SavedPlace
 import androidx.core.content.edit
-import com.google.android.gms.maps.model.LatLng
+import org.osmdroid.util.GeoPoint
 
 class SharedPreferences(context: Context) {
 
@@ -19,7 +19,7 @@ class SharedPreferences(context: Context) {
         private const val KEY_LAST_TIME = "last_location_timestamp"
     }
 
-    fun saveLastLocation(latLng: LatLng) {
+    fun saveLastLocation(latLng: GeoPoint) {
         prefs.edit {
             putString(KEY_LAST_LAT, latLng.latitude.toString())
             putString(KEY_LAST_LNG, latLng.longitude.toString())
@@ -27,10 +27,10 @@ class SharedPreferences(context: Context) {
         }
     }
 
-    fun getLastLocation(): LatLng? {
+    fun getLastLocation(): GeoPoint? {
         val lat = prefs.getString(KEY_LAST_LAT, null)?.toDoubleOrNull() ?: return null
         val lng = prefs.getString(KEY_LAST_LNG, null)?.toDoubleOrNull() ?: return null
-        return LatLng(lat, lng)
+        return GeoPoint(lat, lng)
     }
 
     fun getLastLocationTime(): Long {

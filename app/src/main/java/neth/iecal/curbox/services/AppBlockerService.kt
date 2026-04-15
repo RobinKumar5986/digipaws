@@ -11,7 +11,6 @@ import android.view.accessibility.AccessibilityEvent
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +29,7 @@ import neth.iecal.curbox.blockers.viewblocker.ViewBlocker
 import neth.iecal.curbox.data.sharedpreferences.SharedPreferences
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.viewBlocker.ViewBlockerFragment
 import neth.iecal.curbox.utils.GeofenceManager
+import org.osmdroid.util.GeoPoint
 
 @Suppress("DEPRECATION")
 class AppBlockerService : BaseBlockingService() {
@@ -134,7 +134,7 @@ class AppBlockerService : BaseBlockingService() {
             fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
                 .addOnSuccessListener { location ->
                     if (location != null) {
-                        val latLng = LatLng(location.latitude, location.longitude)
+                        val latLng = GeoPoint(location.latitude, location.longitude)
                         sharedPrefs.saveLastLocation(latLng)
                         if (GeofenceManager.isUserInsideAnyLocation(this, latLng.latitude, latLng.longitude)) {
                             action()

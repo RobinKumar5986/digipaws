@@ -117,8 +117,9 @@ dependencies {
     implementation(libs.mpandroidchart)
     implementation(libs.timerangepicker)
 
-    implementation("com.google.android.gms:play-services-maps:20.0.0")
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("org.osmdroid:osmdroid-android:6.1.18") //OSM Dependency
+
     implementation("com.google.code.gson:gson:2.10.1")
 
 }

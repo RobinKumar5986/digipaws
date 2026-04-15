@@ -11,13 +11,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.model.LatLng
+import org.osmdroid.util.GeoPoint
 
 class GeoBlockerHelper(private val fragment: Fragment) {
 
     private var requestPermissionLauncher: ActivityResultLauncher<Array<String>>? = null
     private var backgroundPermissionLauncher: ActivityResultLauncher<String>? = null
-    private var onLocationReceived: ((LatLng) -> Unit)? = null
+    private var onLocationReceived: ((GeoPoint) -> Unit)? = null
 
     init {
         requestPermissionLauncher = fragment.registerForActivityResult(
@@ -48,7 +48,7 @@ class GeoBlockerHelper(private val fragment: Fragment) {
         }
     }
 
-    fun checkAndRequestLocation(callback: (LatLng) -> Unit) {
+    fun checkAndRequestLocation(callback: (GeoPoint) -> Unit) {
         this.onLocationReceived = callback
         val context = fragment.requireContext()
 
@@ -99,7 +99,7 @@ class GeoBlockerHelper(private val fragment: Fragment) {
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(fragment.requireActivity())
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 if (location != null) {
-                    onLocationReceived?.invoke(LatLng(location.latitude, location.longitude))
+                    onLocationReceived?.invoke(GeoPoint(location.latitude, location.longitude))
                 }
             }
         } catch (e: Exception) {
