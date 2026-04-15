@@ -65,7 +65,7 @@ class GeoBlockerGroupsFragment : Fragment() {
         Configuration.getInstance().userAgentValue = ctx.packageName
 
         locationHelper = GeoBlockerHelper(this)
-        sharedPreferences = SharedPreferences(ctx)
+        sharedPreferences = SharedPreferences.getInstance(ctx)
 
         val tv = TypedValue()
         ctx.theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, tv, true)

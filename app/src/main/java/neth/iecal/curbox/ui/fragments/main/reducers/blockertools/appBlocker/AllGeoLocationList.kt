@@ -29,7 +29,7 @@ class AllGeoLocationList : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_all_geo_location_list, container, false)
-        sharedPrefs = SharedPreferences(requireContext())
+        sharedPrefs = SharedPreferences.getInstance(requireContext())
 
         val rvPlaces = view.findViewById<RecyclerView>(R.id.rvPlaces)
         adapter = GeoPlaceAdapter(prepareList().toMutableList())

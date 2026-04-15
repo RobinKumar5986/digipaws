@@ -75,7 +75,10 @@ class WarningActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val mode = intent.getIntExtra("mode", 0)
-
+        if (intent.getStringExtra("mode") == "GEO_BLOCK") {
+            showGeoBlockWarning()
+            return
+        }
 val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
             intent.getStringExtra("warning_config"),
             AppBlockerWarningScreenConfig::class.java
@@ -348,6 +351,41 @@ val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
 
                 currentVibrator.vibrate(VibrationEffect.createWaveform(jaggedPattern, -1))
             }
+        }
+    }
+
+    private fun showGeoBlockWarning() {
+        var secondsLeft = 10
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle("📍 Location Blocked")
+            .setMessage("This app is blocked at your current location.\n\nAuto-dismissing in 10s...")
+            .setPositiveButton("Dismiss") { d, _ ->
+                d.dismiss()
+                finishAffinity()
+            }
+            .setCancelable(false)
+            .show()
+
+        val timer = object : CountDownTimer(10_000, 1_000) {
+            override fun onTick(millisUntilFinished: Long) {
+                secondsLeft--
+                dialog.setMessage(
+                    "This app is blocked at your current location.\n\nAuto-dismissing in ${secondsLeft}s..."
+                )
+            }
+
+            override fun onFinish() {
+                if (dialog.isShowing) {
+                    dialog.dismiss()
+                    finishAffinity()
+                }
+            }
+        }.start()
+
+        dialog.setOnDismissListener {
+            timer.cancel()
+            finishAffinity()
         }
     }
 }

@@ -8,9 +8,6 @@ import android.content.IntentFilter
 import android.os.Build
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,8 +39,13 @@ class AppBlockerService : BaseBlockingService() {
     private var pickerNotification: ElementPickerNotification? = null
     private var grayScaleFilter = GrayScaleFilter()
 
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var sharedPrefs: SharedPreferences
+    private lateinit var crashLogger: CrashLogger
+
+    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val eventChannel = Channel<AccessibilityEvent>(Channel.CONFLATED) { droppedEvent ->
+        droppedEvent.recycle()
+    }
 
     private val pickerReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -66,19 +68,10 @@ class AppBlockerService : BaseBlockingService() {
         }
     }
 
-    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-
-    private val eventChannel = Channel<AccessibilityEvent>(Channel.CONFLATED) { droppedEvent ->
-        droppedEvent.recycle()
-    }
-
-    private lateinit var crashLogger: CrashLogger
-
     override fun onCreate() {
         super.onCreate()
         crashLogger = CrashLogger(this)
-        sharedPrefs = SharedPreferences(this)
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        sharedPrefs = SharedPreferences.getInstance(applicationContext)
         try {
             rikka.shizuku.ShizukuProvider.requestBinderForNonProviderProcess(this)
         } catch (e: Exception) {
@@ -90,57 +83,57 @@ class AppBlockerService : BaseBlockingService() {
         event ?: return
         super.onAccessibilityEvent(event)
 
-        checkLocationAndExecute(event) {
-            try {
-                appBlocker.doAppBlockerCheck(event)
-                grayScaleFilter.doGrayscaleCheck(event)
-                focusModeBlocker.doFocusModeCheck(event)
-            } catch (t: Throwable) {
-                Log.e("error", t.message.toString())
-                crashLogger.logNonFatalError(Exception(t))
-            }
+        val packageName = event.packageName?.toString() ?: ""
+        val isInsideGeoZone = checkLocationStatus()
 
-            val eventCopy = AccessibilityEvent.obtain(event)
-            val result = eventChannel.trySend(eventCopy)
+        if (isInsideGeoZone) {
+            // Check if the current app is in the restricted category
+            if (appBlocker.blockedAppsList.containsKey(packageName) ||
+                appBlocker.timeBlockedAppsList.containsKey(packageName)) {
 
-            // If the channel is closed or rejected it, recycle immediately
-            if (result.isFailure) {
-                eventCopy.recycle()
+                GeofenceManager.showGeoBlockWarning(this, packageName)
+                return
             }
+        }
+
+        // Proceed with normal checks if geo-block is not applicable
+        try {
+            appBlocker.doAppBlockerCheck(event)
+            grayScaleFilter.doGrayscaleCheck(event)
+            focusModeBlocker.doFocusModeCheck(event)
+        } catch (t: Throwable) {
+            Log.e("error", t.message.toString())
+            crashLogger.logNonFatalError(Exception(t))
+        }
+
+        val eventCopy = AccessibilityEvent.obtain(event)
+        val result = eventChannel.trySend(eventCopy)
+
+        // If the channel is closed or rejected it, recycle immediately
+        if (result.isFailure) {
+            eventCopy.recycle()
         }
     }
 
-    //function for checking the geo fence.
     @SuppressLint("MissingPermission")
-    private fun checkLocationAndExecute(event: AccessibilityEvent, action: () -> Unit) {
-        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            val cached = sharedPrefs.getLastLocation()
-            if (cached != null && GeofenceManager.isUserInsideAnyLocation(this, cached.latitude, cached.longitude)) {
-                action()
-            }
-            return
-        }
-
+    private fun checkLocationStatus(): Boolean {
         val lastTime = sharedPrefs.getLastLocationTime()
-        val currentTime = System.currentTimeMillis()
-        val throttleLimit = 30 * 60 * 1000
+        val throttleLimit = 30 * 1000 // 30 seconds
 
-        if (currentTime - lastTime <= throttleLimit) {
+        if (System.currentTimeMillis() - lastTime <= throttleLimit) {
             val cached = sharedPrefs.getLastLocation()
-            if (cached != null && GeofenceManager.isUserInsideAnyLocation(this, cached.latitude, cached.longitude)) {
-                action()
-            }
+            return if (cached != null) {
+                GeofenceManager.isUserInsideAnyLocation(applicationContext, cached.latitude, cached.longitude)
+            } else false
         } else {
-            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
-                .addOnSuccessListener { location ->
-                    if (location != null) {
-                        val latLng = GeoPoint(location.latitude, location.longitude)
-                        sharedPrefs.saveLastLocation(latLng)
-                        if (GeofenceManager.isUserInsideAnyLocation(this, latLng.latitude, latLng.longitude)) {
-                            action()
-                        }
-                    }
-                }
+            val location = GeofenceManager.getLastKnownLocation(this)
+            return if (location != null) {
+                val latLng = GeoPoint(location.latitude, location.longitude)
+                sharedPrefs.saveLastLocation(latLng)
+                GeofenceManager.isUserInsideAnyLocation(applicationContext, latLng.latitude, latLng.longitude)
+            } else {
+                false
+            }
         }
     }
 

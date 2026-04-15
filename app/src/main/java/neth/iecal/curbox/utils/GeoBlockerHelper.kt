@@ -4,13 +4,13 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.os.Build
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.google.android.gms.location.LocationServices
 import org.osmdroid.util.GeoPoint
 
 class GeoBlockerHelper(private val fragment: Fragment) {
@@ -96,11 +96,20 @@ class GeoBlockerHelper(private val fragment: Fragment) {
     @SuppressLint("MissingPermission")
     private fun getLastKnownLocation() {
         try {
-            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(fragment.requireActivity())
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                if (location != null) {
-                    onLocationReceived?.invoke(GeoPoint(location.latitude, location.longitude))
+            val context = fragment.requireContext()
+            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val providers = locationManager.getProviders(true)
+            var bestLocation: android.location.Location? = null
+
+            for (provider in providers) {
+                val l = locationManager.getLastKnownLocation(provider) ?: continue
+                if (bestLocation == null || l.accuracy < bestLocation.accuracy) {
+                    bestLocation = l
                 }
+            }
+
+            bestLocation?.let {
+                onLocationReceived?.invoke(GeoPoint(it.latitude, it.longitude))
             }
         } catch (e: Exception) {
             Log.e("GeoBlockerHelper", "Error getting location: ${e.message}")
